@@ -283,12 +283,11 @@ class User
                 if (!DB::isConnectable(DB_AUTH))
                     return AUTH_INTERNAL_ERR;
 
-                $wow = DB::Auth()->selectRow('SELECT a.id, a.sha_pass_hash, ab.active AS hasBan FROM account a LEFT JOIN account_banned ab ON ab.id = a.id AND active <> 0 WHERE username = ? LIMIT 1', $name);
+                $wow = DB::Auth()->selectRow('SELECT a.id, a.seed, a.verifier, ab.active AS hasBan FROM account a LEFT JOIN account_banned ab ON ab.id = a.id AND active <> 0 WHERE username = ? LIMIT 1', $name);
                 if (!$wow)
                     return AUTH_WRONGUSER;
 
-                self::$passHash = $wow['sha_pass_hash'];
-                if (!self::verifySHA1($name, $pass))
+                if (!self::verifySRP6($name, $pass, $wow['seed'], $wow['verifier']))
                     return AUTH_WRONGPASS;
 
                 if ($wow['hasBan'])
@@ -387,15 +386,17 @@ class User
         return $_ === crypt($pass, $_);
     }
 
-    // sha1 used by TC / MaNGOS
-    private static function hashSHA1($name, $pass)
+    private static function verifySRP6($user, $pass, $seed, $verifier)
     {
-        return sha1(strtoupper($name).':'.strtoupper($pass));
-    }
-
-    private static function verifySHA1($name, $pass)
-    {
-        return strtoupper(self::$passHash) === strtoupper(self::hashSHA1($name, $pass));
+        $g = gmp_init(7);
+        $N = gmp_init('894B645E89E1535BBDAD5B8B290650530801B18EBFBF5E8FAB3C82872A3E9BB7', 16);
+        $x = gmp_import(
+            sha1($seed . sha1(strtoupper($user . ':' . $pass), TRUE), TRUE),
+            1,
+            GMP_LSW_FIRST
+        );
+        $v = gmp_powm($g, $x, $N);
+        return ($verifier === gmp_export($v, 1, GMP_LSW_FIRST));
     }
 
     public static function isValidName($name, &$errCode = 0)
