@@ -283,11 +283,11 @@ class User
                 if (!DB::isConnectable(DB_AUTH))
                     return AUTH_INTERNAL_ERR;
 
-                $wow = DB::Auth()->selectRow('SELECT a.id, a.seed, a.verifier, ab.active AS hasBan FROM account a LEFT JOIN account_banned ab ON ab.id = a.id AND active <> 0 WHERE username = ? LIMIT 1', $name);
+                $wow = DB::Auth()->selectRow('SELECT a.id, a.salt, a.verifier, ab.active AS hasBan FROM account a LEFT JOIN account_banned ab ON ab.id = a.id AND active <> 0 WHERE username = ? LIMIT 1', $name);
                 if (!$wow)
                     return AUTH_WRONGUSER;
 
-                if (!self::verifySRP6($name, $pass, $wow['seed'], $wow['verifier']))
+                if (!self::verifySRP6($name, $pass, $wow['salt'], $wow['verifier']))
                     return AUTH_WRONGPASS;
 
                 if ($wow['hasBan'])
@@ -386,17 +386,17 @@ class User
         return $_ === crypt($pass, $_);
     }
 
-    private static function verifySRP6($user, $pass, $seed, $verifier)
+    private static function verifySRP6($user, $pass, $salt, $verifier)
     {
         $g = gmp_init(7);
         $N = gmp_init('894B645E89E1535BBDAD5B8B290650530801B18EBFBF5E8FAB3C82872A3E9BB7', 16);
         $x = gmp_import(
-            sha1($seed . sha1(strtoupper($user . ':' . $pass), TRUE), TRUE),
+            sha1($salt . sha1(strtoupper($user . ':' . $pass), TRUE), TRUE),
             1,
             GMP_LSW_FIRST
         );
         $v = gmp_powm($g, $x, $N);
-        return ($verifier === gmp_export($v, 1, GMP_LSW_FIRST));
+        return ($verifier === str_pad(gmp_export($v, 1, GMP_LSW_FIRST), 32, chr(0), STR_PAD_RIGHT));
     }
 
     public static function isValidName($name, &$errCode = 0)
