@@ -192,6 +192,7 @@ class ItemPage extends genericPage
         if (!empty($this->subject->getExtendedCost([], $_reqRating)[$this->subject->id]))
         {
             $vendors  = $this->subject->getExtendedCost()[$this->subject->id];
+            $stack    = $this->subject->getField('buyCount');
             $each     = $this->subject->getField('stackable') > 1 ? '[color=q0] ('.Lang::item('each').')[/color]' : null;
             $handled  = [];
             $costList = [];
@@ -215,12 +216,12 @@ class ItemPage extends genericPage
 
                         if ($c < 0)                         // currency items (and honor or arena)
                         {
-                            $currency[] = -$c.','.$qty;
+                            $currency[] = -$c.','.($qty / $stack);
                             $this->extendGlobalIds(TYPE_CURRENCY, -$c);
                         }
                         else if ($c > 0)                    // plain items (item1,count1,item2,count2,...)
                         {
-                            $tokens[$c] = $c.','.$qty;
+                            $tokens[$c] = $c.','.($qty / $stack);
                             $this->extendGlobalIds(TYPE_ITEM, $c);
                         }
                     }
@@ -231,7 +232,7 @@ class ItemPage extends genericPage
 
                     $handled[] = md5(serialize($data));
 
-                    $cost = isset($data[0]) ? '[money='.$data[0] : '[money';
+                    $cost = isset($data[0]) ? '[money='.($data[0] / $stack) : '[money';
 
                     if ($tokens)
                         $cost .= ' items='.implode(',', $tokens);
@@ -286,11 +287,17 @@ class ItemPage extends genericPage
                 $infobox[] = Lang::item('cantDisenchant');
         }
 
-        if (($_flags & ITEM_FLAG_MILLABLE) && $this->subject->getField('requiredSkill') == 773)
+        if (($_flags & ITEM_FLAG_MILLABLE) && $this->subject->getField('requiredSkill') == SKILL_INSCRIPTION)
+        {
             $infobox[] = Lang::item('millable').'&nbsp;([tooltip=tooltip_reqinscription]'.$this->subject->getField('requiredSkillRank').'[/tooltip])';
+            $infobox[] = Lang::formatSkillBreakpoints(Game::getBreakpointsForSkill(SKILL_INSCRIPTION, $this->subject->getField('requiredSkillRank')));
+        }
 
-        if (($_flags & ITEM_FLAG_PROSPECTABLE) && $this->subject->getField('requiredSkill') == 755)
+        if (($_flags & ITEM_FLAG_PROSPECTABLE) && $this->subject->getField('requiredSkill') == SKILL_JEWELCRAFTING)
+        {
             $infobox[] = Lang::item('prospectable').'&nbsp;([tooltip=tooltip_reqjewelcrafting]'.$this->subject->getField('requiredSkillRank').'[/tooltip])';
+            $infobox[] = Lang::formatSkillBreakpoints(Game::getBreakpointsForSkill(SKILL_JEWELCRAFTING, $this->subject->getField('requiredSkillRank')));
+        }
 
         if ($_flags & ITEM_FLAG_DEPRECATED)
             $infobox[] = '[tooltip=tooltip_deprecated]'.Lang::item('deprecated').'[/tooltip]';

@@ -771,7 +771,7 @@ class SpellList extends BaseType
             $str .= implode(', ', $runes);
         }
         else if ($this->curTpl['powerCostPercent'] > 0)     // power cost: pct over static
-            $str .= $this->curTpl['powerCostPercent']."% ".sprintf(Lang::spell('pctCostOf'), strtolower(Lang::spell('powerTypes', $pt)));
+            $str .= $this->curTpl['powerCostPercent']."% ".sprintf(Lang::spell('pctCostOf'), mb_strtolower(Lang::spell('powerTypes', $pt)));
         else if ($this->curTpl['powerCost'] > 0 || $this->curTpl['powerPerSecond'] > 0 || $this->curTpl['powerCostPerLevel'] > 0)
             $str .= ($pt == POWER_RAGE || $pt == POWER_RUNIC_POWER ? $this->curTpl['powerCost'] / 10 : $this->curTpl['powerCost']).' '.Util::ucFirst(Lang::spell('powerTypes', $pt));
 
@@ -2078,7 +2078,7 @@ class SpellList extends BaseType
         return $x;
     }
 
-    public function getColorsForCurrent()
+    public function getColorsForCurrent() : array
     {
         $gry = $this->curTpl['skillLevelGrey'];
         $ylw = $this->curTpl['skillLevelYellow'];
@@ -2094,7 +2094,7 @@ class SpellList extends BaseType
         if ($org >= $ylw || $org >= $grn || $org >= $gry)
             $org = 0;
 
-        return $gry > 1 ? [$org, $ylw, $grn, $gry] : null;
+        return $gry > 1 ? [$org, $ylw, $grn, $gry] : [];
     }
 
     public function getListviewData($addInfoMask = 0x0)
